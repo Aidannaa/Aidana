@@ -1,86 +1,149 @@
-import java.util.*;
-import java.util.concurrent.*;
-
 public class dom11 {
-    enum VacancyStatus {PENDING, APPROVED, REVISE}
-    enum CandidateStatus {APPLIED, REJECTED, INTERVIEW_INVITED, OFFERED, HIRED}
+    public static abstract class User {
+        protected int id;
+        protected String name;
+        protected String email;
+        protected String address;
+        protected String phone;
+        protected String role;
 
-    static class Vacancy {
-        String title;
-        VacancyStatus status = VacancyStatus.PENDING;
-        Vacancy(String t){ this.title = t; }
+        public void register() {}
+        public void login() {}
+        public void updateData() {}
     }
 
-    static class Candidate {
+    public static class Client extends User {
+        private int loyaltyPoints;
+
+        public void addPoints(int points) {
+            loyaltyPoints += points;
+        }
+    }
+
+    public static class Admin extends User {
+        public void logAction(String action) {
+            System.out.println("Admin log: " + action);
+        }
+    }
+
+
+    public static class Category {
+        int id;
         String name;
-        CandidateStatus status = CandidateStatus.APPLIED;
-        Candidate(String n){ this.name = n; }
-        public String toString(){ return name + " (" + status + ")"; }
     }
 
-    public static void main(String[] args) throws Exception {
-        Vacancy v = new Vacancy("Java Developer");
-        System.out.println("Заявка создана.");
+    public static class Product {
+        int id;
+        String title;
+        String description;
+        double price;
+        int stock;
+        Category category;
 
-        if(!validate(v)) {
-            System.out.println("HR: Требуется доработка.");
-            return;
+        public void create() {}
+        public void update() {}
+        public void delete() {}
+    }
+
+
+    public static class Order {
+        int id;
+        String createdAt;
+        String status;
+        Client client;
+        java.util.List<Product> products;
+        double totalAmount;
+
+        public void place() {}
+        public void cancel() {}
+        public void pay() {}
+    }
+
+    public static class Cart {
+        java.util.List<Product> items = new java.util.ArrayList<>();
+        PromoCode promoCode;
+
+        public void addItem(Product p) {
+            items.add(p);
         }
-        v.status = VacancyStatus.APPROVED;
-        System.out.println("HR подтвердил. Вакансия опубликована.");
 
-        List<Candidate> list = List.of(
-                new Candidate("Aibek"),
-                new Candidate("Dana"),
-                new Candidate("Ernar"),
-                new Candidate("Saltanat")
-        );
+        public void removeItem(Product p) {
+            items.remove(p);
+        }
 
-        ExecutorService ex = Executors.newFixedThreadPool(4);
-        List<Future<Candidate>> futures = new ArrayList<>();
-        for(Candidate c : list) futures.add(ex.submit(() -> checkCandidate(c)));
-
-        for(Future<Candidate> f : futures)
-            System.out.println(f.get());
-        ex.shutdown();
-
-        for(Candidate c : list) {
-            if(c.status == CandidateStatus.INTERVIEW_INVITED) {
-                boolean hr = interview("HR", c);
-                boolean tech = interview("TechLead", c);
-                if(hr && tech) {
-                    c.status = CandidateStatus.OFFERED;
-                    if(Math.random() > 0.4) {
-                        c.status = CandidateStatus.HIRED;
-                        System.out.println(c.name + " принят. IT уведомлен.");
-                    } else {
-                        System.out.println(c.name + " отказался.");
-                    }
-                } else {
-                    c.status = CandidateStatus.REJECTED;
-                    System.out.println(c.name + " не прошел интервью.");
-                }
-            }
+        public void applyPromoCode(PromoCode code) {
+            this.promoCode = code;
         }
     }
 
-    static boolean validate(Vacancy v){
-        return v.title.length() > 3;
+    public static class PromoCode {
+        String code;
+        double discount;
+
+        public boolean validate() { return true; }
     }
 
-    static Candidate checkCandidate(Candidate c) throws Exception {
-        Thread.sleep((int)(Math.random()*300));
-        if(c.name.length() < 4)
-            c.status = CandidateStatus.REJECTED;
-        else
-            c.status = CandidateStatus.INTERVIEW_INVITED;
-        return c;
+
+    public static class Payment {
+        int id;
+        String type;
+        double amount;
+        String status;
+        String date;
+
+        public void process() {}
+        public void refund() {}
     }
 
-    static boolean interview(String who, Candidate c) throws Exception {
-        Thread.sleep((int)(Math.random()*200));
-        boolean pass = Math.random() > 0.3;
-        System.out.println(who + " interview / " + c.name + ": " + (pass ? "OK" : "FAIL"));
-        return pass;
+
+    public static class Delivery {
+        int id;
+        String address;
+        String status;
+        String courier;
+
+        public void send() {}
+        public void track() {}
+        public void complete() {}
+    }
+
+
+    public static class Review {
+        int id;
+        String text;
+        int rating;
+        String date;
+
+        public void submit() {}
+    }
+
+
+
+    public static abstract class Discount {
+        protected double value;
+        public abstract double apply(double amount);
+    }
+
+    public static class ProductDiscount extends Discount {
+        @Override
+        public double apply(double amount) {
+            return amount - value;
+        }
+    }
+
+    public static class PromoCodeDiscount extends Discount {
+        @Override
+        public double apply(double amount) {
+            return amount * (1 - value);
+        }
+    }
+
+
+
+    public static void main(String[] args) {
+        Client c = new Client();
+        c.name = "Test User";
+        c.addPoints(10);
+        System.out.println("Client OK");
     }
 }
