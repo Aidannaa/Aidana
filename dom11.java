@@ -1,149 +1,86 @@
+import java.util.*;
+import java.util.concurrent.*;
+
 public class dom11 {
-    public static abstract class User {
-        protected int id;
-        protected String name;
-        protected String email;
-        protected String address;
-        protected String phone;
-        protected String role;
+    enum VacancyStatus {PENDING, APPROVED, REVISE}
+    enum CandidateStatus {APPLIED, REJECTED, INTERVIEW_INVITED, OFFERED, HIRED}
 
-        public void register() {}
-        public void login() {}
-        public void updateData() {}
-    }
-
-    public static class Client extends User {
-        private int loyaltyPoints;
-
-        public void addPoints(int points) {
-            loyaltyPoints += points;
-        }
-    }
-
-    public static class Admin extends User {
-        public void logAction(String action) {
-            System.out.println("Admin log: " + action);
-        }
-    }
-
-
-    public static class Category {
-        int id;
-        String name;
-    }
-
-    public static class Product {
-        int id;
+    static class Vacancy {
         String title;
-        String description;
-        double price;
-        int stock;
-        Category category;
-
-        public void create() {}
-        public void update() {}
-        public void delete() {}
+        VacancyStatus status = VacancyStatus.PENDING;
+        Vacancy(String t){ this.title = t; }
     }
 
-
-    public static class Order {
-        int id;
-        String createdAt;
-        String status;
-        Client client;
-        java.util.List<Product> products;
-        double totalAmount;
-
-        public void place() {}
-        public void cancel() {}
-        public void pay() {}
+    static class Candidate {
+        String name;
+        CandidateStatus status = CandidateStatus.APPLIED;
+        Candidate(String n){ this.name = n; }
+        public String toString(){ return name + " (" + status + ")"; }
     }
 
-    public static class Cart {
-        java.util.List<Product> items = new java.util.ArrayList<>();
-        PromoCode promoCode;
+    public static void main(String[] args) throws Exception {
+        Vacancy v = new Vacancy("Java Developer");
+        System.out.println("Заявка создана.");
 
-        public void addItem(Product p) {
-            items.add(p);
+        if(!validate(v)) {
+            System.out.println("HR: Требуется доработка.");
+            return;
         }
+        v.status = VacancyStatus.APPROVED;
+        System.out.println("HR подтвердил. Вакансия опубликована.");
 
-        public void removeItem(Product p) {
-            items.remove(p);
-        }
+        List<Candidate> list = List.of(
+                new Candidate("Aibek"),
+                new Candidate("Dana"),
+                new Candidate("Ernar"),
+                new Candidate("Saltanat")
+        );
 
-        public void applyPromoCode(PromoCode code) {
-            this.promoCode = code;
-        }
-    }
+        ExecutorService ex = Executors.newFixedThreadPool(4);
+        List<Future<Candidate>> futures = new ArrayList<>();
+        for(Candidate c : list) futures.add(ex.submit(() -> checkCandidate(c)));
 
-    public static class PromoCode {
-        String code;
-        double discount;
+        for(Future<Candidate> f : futures)
+            System.out.println(f.get());
+        ex.shutdown();
 
-        public boolean validate() { return true; }
-    }
-
-
-    public static class Payment {
-        int id;
-        String type;
-        double amount;
-        String status;
-        String date;
-
-        public void process() {}
-        public void refund() {}
-    }
-
-
-    public static class Delivery {
-        int id;
-        String address;
-        String status;
-        String courier;
-
-        public void send() {}
-        public void track() {}
-        public void complete() {}
-    }
-
-
-    public static class Review {
-        int id;
-        String text;
-        int rating;
-        String date;
-
-        public void submit() {}
-    }
-
-
-
-    public static abstract class Discount {
-        protected double value;
-        public abstract double apply(double amount);
-    }
-
-    public static class ProductDiscount extends Discount {
-        @Override
-        public double apply(double amount) {
-            return amount - value;
+        for(Candidate c : list) {
+            if(c.status == CandidateStatus.INTERVIEW_INVITED) {
+                boolean hr = interview("HR", c);
+                boolean tech = interview("TechLead", c);
+                if(hr && tech) {
+                    c.status = CandidateStatus.OFFERED;
+                    if(Math.random() > 0.4) {
+                        c.status = CandidateStatus.HIRED;
+                        System.out.println(c.name + " принят. IT уведомлен.");
+                    } else {
+                        System.out.println(c.name + " отказался.");
+                    }
+                } else {
+                    c.status = CandidateStatus.REJECTED;
+                    System.out.println(c.name + " не прошел интервью.");
+                }
+            }
         }
     }
 
-    public static class PromoCodeDiscount extends Discount {
-        @Override
-        public double apply(double amount) {
-            return amount * (1 - value);
-        }
+    static boolean validate(Vacancy v){
+        return v.title.length() > 3;
     }
 
+    static Candidate checkCandidate(Candidate c) throws Exception {
+        Thread.sleep((int)(Math.random()*300));
+        if(c.name.length() < 4)
+            c.status = CandidateStatus.REJECTED;
+        else
+            c.status = CandidateStatus.INTERVIEW_INVITED;
+        return c;
+    }
 
-
-    public static void main(String[] args) {
-        Client c = new Client();
-        c.name = "Test User";
-        c.addPoints(10);
-        System.out.println("Client OK");
+    static boolean interview(String who, Candidate c) throws Exception {
+        Thread.sleep((int)(Math.random()*200));
+        boolean pass = Math.random() > 0.3;
+        System.out.println(who + " interview / " + c.name + ": " + (pass ? "OK" : "FAIL"));
+        return pass;
     }
 }
